@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  dispatcher
+  admin
+}
+
+enum DriverGroup {
+  New_Drivers
+  Local_Drivers
+  Experienced_Drivers
+}
+
+enum TimeBlock {
+  Morning
+  Midday
+  Afternoon
+}
+
+enum ColumnType {
+  standard
+  temporary
+}
+
+enum RecordStatus {
+  not_started
+  in_progress
+  done
+  blocked
+}
+
+enum AuditEntityType {
+  driver
+  check
+  record
+}
+
+enum AuditAction {
+  create
+  update
+  deactivate
+  reactivate
+  rename
+  reorder
+  move_timeblock
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  email     String?  @unique
+  role      UserRole
+  createdAt DateTime @default(now())
+
+  credentials UserCredential?
+  records     DailyCheckRecord[]
+  auditLogs   AuditLog[]
+}
+
+model UserCredential {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @unique @db.Uuid
+  passwordHash String
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Driver {
+  id        String       @id @default(uuid()) @db.Uuid
+  name      String
+  truckNumber String?
+  group     DriverGroup
+  isActive  Boolean      @default(true)
+  sortOrder Int
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  records DailyCheckRecord[]
+}
+
+model Check {
+  id             String      @id @default(uuid()) @db.Uuid
+  systemName     String      @unique
+  displayName    String
+  timeBlock      TimeBlock
+  sortOrder      Int
+  instructionText String
+  columnType     ColumnType  @default(temporary)
+  isActive       Boolean     @default(true)
+  expiresAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  records DailyCheckRecord[]
+}
+
+model DailyCheckRecord {
+  id             String       @id @default(uuid()) @db.Uuid
+  date           DateTime     @db.Date
+  driverId       String       @db.Uuid
+  checkId        String       @db.Uuid
+  status         RecordStatus @default(not_started)
+  startedAt      DateTime?
+  completedAt    DateTime?
+  updatedAt      DateTime     @updatedAt
+  updatedByUserId String      @db.Uuid
+  blockedReason  String?
+  note           String?
+
+  driver Driver @relation(fields: [driverId], references: [id])
+  check  Check  @relation(fields: [checkId], references: [id])
+  updatedByUser User @relation(fields: [updatedByUserId], references: [id])
+
+  @@unique([date, driverId, checkId])
+  @@index([date])
+}
+
+model AuditLog {
+  id         String          @id @default(uuid()) @db.Uuid
+  occurredAt DateTime        @default(now())
+  userId     String          @db.Uuid
+  entityType AuditEntityType
+  entityId   String          @db.Uuid
+  action     AuditAction
+  summary    String
+  diff       Json
+
+  user User @relation(fields: [userId], references: [id])
+  @@index([occurredAt])
+}
