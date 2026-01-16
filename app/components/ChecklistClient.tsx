@@ -3,8 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { CheckColumn, DailyCheckRecord, Driver, RecordStatus } from "@/app/lib/types";
-import { groupOrder, statusColors, statusCycle, timeBlocks } from "@/app/lib/format";
-import clsx from "clsx";
+import { groupOrder, statusCycle, timeBlocks } from "@/app/lib/format";
 
 const blockedReasons = [
   "No response",
@@ -15,6 +14,16 @@ const blockedReasons = [
 
 const formatDateInput = (date: Date) => date.toISOString().slice(0, 10);
 
+const formatTime = (dateString: string | null) => {
+  if (!dateString) return null;
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
 type OverviewResponse = {
   drivers: Driver[];
   checks: CheckColumn[];
@@ -24,6 +33,14 @@ type OverviewResponse = {
 type RecordMap = Record<string, DailyCheckRecord>;
 
 const getKey = (driverId: string, checkId: string) => `${driverId}-${checkId}`;
+
+// Professional status styles
+const statusStyles: Record<RecordStatus, { dot: string; text: string; label: string }> = {
+  not_started: { dot: "bg-gray-400", text: "text-gray-500", label: "Not Started" },
+  in_progress: { dot: "bg-blue-500", text: "text-blue-600", label: "In Progress" },
+  done: { dot: "bg-green-600", text: "text-green-700", label: "Done" },
+  blocked: { dot: "bg-red-600", text: "text-red-700", label: "Blocked" },
+};
 
 export default function ChecklistClient() {
   const searchParams = useSearchParams();
@@ -85,14 +102,22 @@ export default function ChecklistClient() {
     }));
   }, [drivers, groupFilter, query]);
 
+  const allChecks = useMemo(() => {
+    return checks
+      .filter((check) => check.isActive)
+      .sort((a, b) => {
+        const blockOrder = timeBlocks.indexOf(a.timeBlock) - timeBlocks.indexOf(b.timeBlock);
+        if (blockOrder !== 0) return blockOrder;
+        return a.sortOrder - b.sortOrder;
+      });
+  }, [checks]);
+
   const checksByBlock = useMemo(() => {
     return timeBlocks.map((block) => ({
       block,
-      checks: checks
-        .filter((check) => check.timeBlock === block && check.isActive)
-        .sort((a, b) => a.sortOrder - b.sortOrder),
+      checks: allChecks.filter((check) => check.timeBlock === block),
     }));
-  }, [checks]);
+  }, [allChecks]);
 
   const handleUpdate = async (
     driverId: string,
@@ -170,288 +195,358 @@ export default function ChecklistClient() {
 
   const filteredStatus = (record: DailyCheckRecord | undefined) => {
     if (statusFilter === "All") return true;
-    if (statusFilter === "Show only Blocked") return record?.status === "blocked";
-    if (statusFilter === "Show only Not Done") return record?.status !== "done";
+    if (statusFilter === "Blocked") return record?.status === "blocked";
+    if (statusFilter === "Not Done") return record?.status !== "done";
     return true;
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <header className="p-6 border-b border-neutral-200 bg-white/80 backdrop-blur">
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Header */}
+      <header className="bg-[#1E3A5F] text-white px-6 py-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold">Dispatch Daily Checklist</h1>
-            <p className="text-sm text-neutral-600">
-              Rapid touchpoints with timestamps, no status clutter.
-            </p>
+            <h1 className="text-xl font-semibold">Daily Dispatch Checklist</h1>
+            <p className="text-blue-200 text-sm">Driver status tracking</p>
           </div>
           <div className="flex items-center gap-3">
             <input
               type="date"
               value={selectedDate}
               onChange={(event) => setSelectedDate(event.target.value)}
-              className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
+              className="bg-white text-gray-900 px-3 py-2 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
             />
-            <a
-              href="/exceptions"
-              className="rounded-xl border border-ink px-3 py-2 text-sm"
-            >
+            <a href="/exceptions" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Exceptions
             </a>
-            <a
-              href="/manage"
-              className="rounded-xl border border-ink px-3 py-2 text-sm"
-            >
+            <a href="/manage" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Manage
             </a>
-            <a
-              href="/changes"
-              className="rounded-xl border border-ink px-3 py-2 text-sm"
-            >
-              Recent Changes
+            <a href="/changes" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
+              Changes
             </a>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-3 items-center">
-          <select
-            value={groupFilter}
-            onChange={(event) => setGroupFilter(event.target.value)}
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-          >
-            <option>All</option>
-            {groupOrder.map((group) => (
-              <option key={group}>{group}</option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-          >
-            <option>All</option>
-            <option>Show only Blocked</option>
-            <option>Show only Not Done</option>
-          </select>
-          <input
-            type="search"
-            placeholder="Search driver"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm"
-          />
+
+        {/* Filters */}
+        <div className="mt-4 flex flex-wrap gap-4 items-center">
+          <div className="flex items-center gap-2">
+            <label className="text-blue-200 text-sm">Group:</label>
+            <select
+              value={groupFilter}
+              onChange={(event) => setGroupFilter(event.target.value)}
+              className="bg-white text-gray-900 px-3 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            >
+              <option value="All">All Groups</option>
+              {groupOrder.map((group) => (
+                <option key={group} value={group}>{group.replace("_", " ")}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-blue-200 text-sm">Status:</label>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="bg-white text-gray-900 px-3 py-1.5 rounded border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm"
+            >
+              <option value="All">All Status</option>
+              <option value="Blocked">Blocked Only</option>
+              <option value="Not Done">Not Done</option>
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-blue-200 text-sm">Search:</label>
+            <input
+              type="search"
+              placeholder="Driver name..."
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="bg-white text-gray-900 px-3 py-1.5 rounded border border-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 text-sm w-48"
+            />
+          </div>
         </div>
       </header>
 
-      <main className="flex-1 overflow-auto">
-        <div className="min-w-[1200px]">
-          <div className="sticky top-0 z-10 grid grid-cols-[280px_1fr] bg-sand">
-            <div className="p-3 border-b border-neutral-200 bg-sand font-semibold">
-              Driver
-            </div>
-            <div className="overflow-auto">
-              <div
-                className="grid"
-                style={{ gridTemplateColumns: `repeat(${checks.length}, minmax(140px, 1fr))` }}
-              >
-                {checksByBlock.map(({ block, checks: blockChecks }) => (
-                  <div
-                    key={block}
-                    className="p-2 border-b border-neutral-200 bg-clay/70 text-xs uppercase tracking-[0.2em]"
-                    style={{ gridColumn: `span ${Math.max(blockChecks.length, 1)}` }}
+      {/* Main Content - Data Table */}
+      <main className="flex-1 p-4 overflow-auto">
+        <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              {/* Table Header */}
+              <thead>
+                {/* Time Block Row */}
+                <tr className="bg-gray-100 border-b border-gray-200">
+                  <th
+                    rowSpan={2}
+                    className="text-left px-4 py-2 font-semibold text-gray-700 border-r border-gray-200 sticky left-0 bg-gray-100 z-10"
                   >
-                    {block}
-                  </div>
-                ))}
-                {checks.map((check) => (
-                  <div
-                    key={check.id}
-                    className="p-3 border-b border-neutral-200 bg-white/80 text-sm font-semibold flex items-center justify-between"
+                    Driver
+                  </th>
+                  <th
+                    rowSpan={2}
+                    className="text-center px-2 py-2 font-semibold text-gray-700 border-r border-gray-200"
                   >
-                    <span>{check.displayName}</span>
-                    <button
-                      onClick={() => setInstructionPanel(check)}
-                      className="text-xs text-neutral-500"
-                    >
-                      i
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
+                    Truck
+                  </th>
+                  {checksByBlock.map(({ block, checks: blockChecks }) => (
+                    blockChecks.length > 0 ? (
+                      <th
+                        key={block}
+                        colSpan={blockChecks.length}
+                        className="text-center px-2 py-2 font-semibold text-gray-700 border-r border-gray-200 bg-gray-50"
+                      >
+                        {block}
+                      </th>
+                    ) : null
+                  ))}
+                </tr>
+                {/* Column Names Row */}
+                <tr className="bg-gray-50 border-b-2 border-gray-300">
+                  {allChecks.map((check) => (
+                    <th key={check.id} className="text-center px-2 py-2 font-medium text-gray-500 border-r border-gray-200">
+                      <button
+                        onClick={() => setInstructionPanel(check)}
+                        className="hover:text-blue-600 hover:underline transition text-xs uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis block w-full"
+                        title={`View instructions: ${check.displayName}`}
+                      >
+                        {check.displayName}
+                      </button>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              {groupedDrivers.map(({ group, drivers: groupDrivers }) => {
+                if (groupDrivers.length === 0) return null;
 
-          {groupedDrivers.map(({ group, drivers }) => (
-            <div key={group}>
-              <div className="sticky top-[72px] z-10 bg-clay/60 px-3 py-2 text-xs uppercase tracking-[0.2em]">
-                {group}
-              </div>
-              {drivers.map((driver) => (
-                <div key={driver.id} className="grid grid-cols-[280px_1fr] border-b border-neutral-200">
-                  <div className="p-3 bg-white/70">
-                    <div className="font-medium">{driver.name}</div>
-                    {driver.truckNumber ? (
-                      <div className="text-xs text-neutral-500">Truck {driver.truckNumber}</div>
-                    ) : null}
-                  </div>
-                  <div className="grid" style={{ gridTemplateColumns: `repeat(${checks.length}, minmax(140px, 1fr))` }}>
-                    {checks.map((check) => {
-                      const key = getKey(driver.id, check.id);
-                      const record = recordMap[key];
-                      if (!filteredStatus(record)) {
-                        return <div key={key} className="border-r border-neutral-100" />;
-                      }
-                      return (
-                        <div
-                          key={key}
-                          id={`cell-${key}`}
-                          className={clsx(
-                            "relative flex items-center justify-center border-r border-neutral-100 p-2",
-                            statusColors[record?.status ?? "not_started"]
-                          )}
+                return (
+                  <tbody key={group}>
+                      {/* Group Header */}
+                      <tr className="bg-[#1E3A5F]">
+                        <td
+                          colSpan={2 + allChecks.length}
+                          className="px-4 py-2 font-semibold text-white text-sm"
                         >
-                          <button
-                            className="absolute inset-0"
-                            onClick={() => handleCycle(driver.id, check.id)}
-                            aria-label="toggle"
-                          />
-                          {record?.note ? (
-                            <button
-                              className="relative z-10 rounded-full bg-white/80 px-2 py-1 text-[10px]"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setNotePanel(record);
-                              }}
-                            >
-                              note
-                            </button>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
+                          {group.replace("_", " ")}
+                          <span className="ml-2 text-blue-200 font-normal">
+                            ({groupDrivers.length} drivers)
+                          </span>
+                        </td>
+                      </tr>
+                      {/* Driver Rows */}
+                      {groupDrivers.map((driver, idx) => (
+                        <tr
+                          key={driver.id}
+                          className={`border-b border-gray-200 hover:bg-blue-50 transition ${
+                            idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          }`}
+                        >
+                          {/* Driver Name */}
+                          <td className={`px-4 py-2 font-medium text-gray-900 border-r border-gray-200 sticky left-0 z-10 whitespace-nowrap ${
+                            idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                          } hover:bg-blue-50`}>
+                            {driver.name}
+                          </td>
+                          {/* Truck Number */}
+                          <td className="px-2 py-2 text-center border-r border-gray-200">
+                            <span className="font-mono text-gray-700 text-sm">
+                              {driver.truckNumber || "-"}
+                            </span>
+                          </td>
+                          {/* Status Cells */}
+                          {allChecks.map((check) => {
+                            const key = getKey(driver.id, check.id);
+                            const record = recordMap[key];
+                            const status = record?.status ?? "not_started";
+                            const style = statusStyles[status];
+                            const showCell = filteredStatus(record);
+
+                            if (!showCell) {
+                              return <td key={key} className="px-2 py-2 border-r border-gray-200" />;
+                            }
+
+                            const timestamp = record?.updatedAt ? formatTime(record.updatedAt) : null;
+
+                            return (
+                              <td key={key} id={`cell-${key}`} className="px-2 py-2 text-center border-r border-gray-200">
+                                <button
+                                  onClick={() => handleCycle(driver.id, check.id)}
+                                  className={`inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-gray-100 transition text-xs ${style.text}`}
+                                  title={`Click to change status (${style.label})${timestamp ? ` - Updated ${timestamp}` : ''}`}
+                                >
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className={`w-2 h-2 rounded-full ${style.dot}`}></span>
+                                    <span className="hidden sm:inline">{style.label}</span>
+                                    {record?.note && (
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setNotePanel(record);
+                                        }}
+                                        className="w-4 h-4 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center cursor-pointer hover:bg-blue-600"
+                                        title="Has note - click to view"
+                                      >
+                                        !
+                                      </span>
+                                    )}
+                                  </span>
+                                  {timestamp && status !== 'not_started' && (
+                                    <span className="text-[10px] text-gray-400">{timestamp}</span>
+                                  )}
+                                </button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                  </tbody>
+                );
+              })}
+            </table>
+          </div>
         </div>
       </main>
 
-      {blockedPrompt ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md space-y-4">
-            <div>
-              <h2 className="text-lg font-semibold">Blocked reason</h2>
-              <p className="text-sm text-neutral-500">
-                Capture the reason so follow-up is clear.
-              </p>
+      {/* Blocked Reason Modal */}
+      {blockedPrompt && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-[#1E3A5F] px-6 py-4 rounded-t-lg">
+              <h2 className="text-lg font-semibold text-white">Mark as Blocked</h2>
+              <p className="text-blue-200 text-sm">Provide a reason for follow-up</p>
             </div>
-            <select
-              value={blockedReason}
-              onChange={(event) => setBlockedReason(event.target.value)}
-              className="w-full rounded-xl border border-neutral-200 px-3 py-2"
-            >
-              {blockedReasons.map((reason) => (
-                <option key={reason}>{reason}</option>
-              ))}
-            </select>
-            <textarea
-              value={blockedNote}
-              onChange={(event) => setBlockedNote(event.target.value)}
-              placeholder="Optional note"
-              className="w-full rounded-xl border border-neutral-200 px-3 py-2"
-              rows={3}
-            />
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => setBlockedPrompt(null)}
-                className="rounded-xl border border-neutral-300 px-3 py-2 text-sm"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleBlockedSave}
-                className="rounded-xl bg-ember text-white px-3 py-2 text-sm"
-              >
-                Save blocked
-              </button>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                <select
+                  value={blockedReason}
+                  onChange={(event) => setBlockedReason(event.target.value)}
+                  className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                >
+                  {blockedReasons.map((reason) => (
+                    <option key={reason}>{reason}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Note (optional)</label>
+                <textarea
+                  value={blockedNote}
+                  onChange={(event) => setBlockedNote(event.target.value)}
+                  placeholder="Add details..."
+                  className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-sm"
+                  rows={3}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setBlockedPrompt(null)}
+                  className="flex-1 px-4 py-2 rounded border border-gray-300 font-medium text-gray-700 hover:bg-gray-50 transition text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleBlockedSave}
+                  className="flex-1 px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 transition text-sm"
+                >
+                  Save Blocked
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {notePanel ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-end">
-          <div className="bg-white w-full max-w-md h-full p-6 space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Note</h2>
+      {/* Note Panel Modal */}
+      {notePanel && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-[#1E3A5F] px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">Edit Note</h2>
+                <p className="text-blue-200 text-sm">Update blocked reason and details</p>
+              </div>
               <button
                 onClick={() => setNotePanel(null)}
-                className="text-sm text-neutral-500"
+                className="w-8 h-8 rounded flex items-center justify-center text-white hover:bg-white/20 transition"
               >
-                Close
+                ✕
               </button>
             </div>
-            <div className="text-sm text-neutral-500">Blocked reason</div>
-            <select
-              value={notePanel.blockedReason ?? blockedReasons[0]}
-              onChange={(event) =>
-                setNotePanel((prev) =>
-                  prev ? { ...prev, blockedReason: event.target.value } : prev
-                )
-              }
-              className="w-full rounded-xl border border-neutral-200 px-3 py-2"
-            >
-              {blockedReasons.map((reason) => (
-                <option key={reason}>{reason}</option>
-              ))}
-            </select>
-            <textarea
-              value={notePanel.note ?? ""}
-              onChange={(event) =>
-                setNotePanel((prev) =>
-                  prev ? { ...prev, note: event.target.value } : prev
-                )
-              }
-              className="w-full rounded-xl border border-neutral-200 px-3 py-2"
-              rows={6}
-            />
-            <button
-              onClick={() => {
-                handleUpdate(
-                  notePanel.driverId,
-                  notePanel.checkId,
-                  notePanel.status,
-                  notePanel.note ?? null,
-                  notePanel.blockedReason ?? null
-                );
-                setNotePanel(null);
-              }}
-              className="rounded-xl bg-ink text-sand px-3 py-2 text-sm"
-            >
-              Save note
-            </button>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Blocked Reason</label>
+                <select
+                  value={notePanel.blockedReason ?? blockedReasons[0]}
+                  onChange={(event) =>
+                    setNotePanel((prev) =>
+                      prev ? { ...prev, blockedReason: event.target.value } : prev
+                    )
+                  }
+                  className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                >
+                  {blockedReasons.map((reason) => (
+                    <option key={reason}>{reason}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+                <textarea
+                  value={notePanel.note ?? ""}
+                  onChange={(event) =>
+                    setNotePanel((prev) =>
+                      prev ? { ...prev, note: event.target.value } : prev
+                    )
+                  }
+                  className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-sm"
+                  rows={6}
+                />
+              </div>
+              <button
+                onClick={() => {
+                  handleUpdate(
+                    notePanel.driverId,
+                    notePanel.checkId,
+                    notePanel.status,
+                    notePanel.note ?? null,
+                    notePanel.blockedReason ?? null
+                  );
+                  setNotePanel(null);
+                }}
+                className="w-full px-4 py-2 rounded bg-[#1E3A5F] text-white font-medium hover:bg-[#2a4a73] transition text-sm"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {instructionPanel ? (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-6">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-lg space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">{instructionPanel.displayName}</h2>
+      {/* Instruction Panel Modal */}
+      {instructionPanel && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <div className="bg-[#1E3A5F] px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-white">{instructionPanel.displayName}</h2>
+                <p className="text-blue-200 text-sm">Instructions</p>
+              </div>
               <button
                 onClick={() => setInstructionPanel(null)}
-                className="text-sm text-neutral-500"
+                className="w-8 h-8 rounded flex items-center justify-center text-white hover:bg-white/20 transition"
               >
-                Close
+                ✕
               </button>
             </div>
-            <pre className="whitespace-pre-wrap text-sm text-neutral-700">
-              {instructionPanel.instructionText || "No instructions yet."}
-            </pre>
+            <div className="p-6">
+              <div className="bg-gray-50 rounded border border-gray-200 p-4 text-gray-700 text-sm whitespace-pre-wrap">
+                {instructionPanel.instructionText || "No instructions available."}
+              </div>
+            </div>
           </div>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

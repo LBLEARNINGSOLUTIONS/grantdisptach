@@ -52,3 +52,35 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ check });
 }
+
+export async function PATCH(request: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { id, isActive } = body;
+
+  if (!id) {
+    return NextResponse.json({ error: "missing id" }, { status: 400 });
+  }
+
+  const check = await prisma.check.update({
+    where: { id },
+    data: { isActive },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      entityType: "check",
+      entityId: check.id,
+      action: "update",
+      summary: `${isActive ? 'Activated' : 'Deactivated'} column ${check.displayName}`,
+      diff: { after: check },
+    },
+  });
+
+  return NextResponse.json({ check });
+}
