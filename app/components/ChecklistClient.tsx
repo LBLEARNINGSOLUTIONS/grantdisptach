@@ -85,12 +85,13 @@ export default function ChecklistClient() {
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
     }
-  }, [drivers, checks, searchParams]);
+  }, [searchParams]);
 
   const groupedDrivers = useMemo(() => {
+    const lowerQuery = query.toLowerCase();
     const filtered = drivers.filter((driver) => {
       if (groupFilter !== "All" && driver.group !== groupFilter) return false;
-      if (query && !driver.name.toLowerCase().includes(query.toLowerCase())) return false;
+      if (query && !driver.name.toLowerCase().includes(lowerQuery)) return false;
       return driver.isActive;
     });
 
@@ -143,20 +144,33 @@ export default function ChecklistClient() {
       note: note ?? null,
     };
 
+    const previousMap = recordMap;
     setRecordMap((prev) => ({ ...prev, [key]: optimistic }));
 
-    await fetch("/api/records", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        date: selectedDate,
-        driverId,
-        checkId,
-        status,
-        blockedReason: blockedReasonValue ?? null,
-        note: note ?? null,
-      }),
-    });
+    try {
+      const response = await fetch("/api/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: selectedDate,
+          driverId,
+          checkId,
+          status,
+          blockedReason: blockedReasonValue ?? null,
+          note: note ?? null,
+        }),
+      });
+
+      if (!response.ok) {
+        // Revert optimistic update on error
+        setRecordMap(previousMap);
+        alert("Failed to update record. Please try again.");
+      }
+    } catch (error) {
+      // Revert optimistic update on network error
+      setRecordMap(previousMap);
+      alert("Network error. Please check your connection and try again.");
+    }
   };
 
   const handleCycle = (driverId: string, checkId: string) => {
@@ -474,22 +488,24 @@ export default function ChecklistClient() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Blocked Reason</label>
-                <select
-                  value={notePanel.blockedReason ?? blockedReasons[0]}
-                  onChange={(event) =>
-                    setNotePanel((prev) =>
-                      prev ? { ...prev, blockedReason: event.target.value } : prev
-                    )
-                  }
-                  className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
-                >
-                  {blockedReasons.map((reason) => (
-                    <option key={reason}>{reason}</option>
-                  ))}
-                </select>
-              </div>
+              {notePanel.status === "blocked" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Blocked Reason</label>
+                  <select
+                    value={notePanel.blockedReason || blockedReasons[0]}
+                    onChange={(event) =>
+                      setNotePanel((prev) =>
+                        prev ? { ...prev, blockedReason: event.target.value } : prev
+                      )
+                    }
+                    className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                  >
+                    {blockedReasons.map((reason) => (
+                      <option key={reason}>{reason}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
                 <textarea

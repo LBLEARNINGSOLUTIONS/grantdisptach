@@ -10,6 +10,10 @@ export async function GET(request: Request) {
   }
 
   const date = new Date(dateParam);
+  if (isNaN(date.getTime())) {
+    return NextResponse.json({ error: "invalid date parameter" }, { status: 400 });
+  }
+
   const now = new Date();
   const [drivers, checks, records] = await Promise.all([
     prisma.driver.findMany({

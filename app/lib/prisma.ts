@@ -8,4 +8,5 @@ export const prisma =
     log: ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Cache the Prisma client in all environments to prevent connection pool exhaustion
+globalForPrisma.prisma = prisma;

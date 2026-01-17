@@ -66,18 +66,30 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "missing id" }, { status: 400 });
   }
 
+  // Fetch current state to determine action type
+  const currentCheck = await prisma.check.findUnique({ where: { id } });
+
   const check = await prisma.check.update({
     where: { id },
     data: { isActive },
   });
+
+  // Determine specific action based on state change
+  const action = !currentCheck?.isActive && isActive ? "reactivate"
+               : currentCheck?.isActive && !isActive ? "deactivate"
+               : "update";
+
+  const actionLabel = action === "reactivate" ? "Reactivated"
+                    : action === "deactivate" ? "Deactivated"
+                    : "Updated";
 
   await prisma.auditLog.create({
     data: {
       userId: session.user.id,
       entityType: "check",
       entityId: check.id,
-      action: "update",
-      summary: `${isActive ? 'Activated' : 'Deactivated'} column ${check.displayName}`,
+      action,
+      summary: `${actionLabel} column ${check.displayName}`,
       diff: { after: check },
     },
   });
