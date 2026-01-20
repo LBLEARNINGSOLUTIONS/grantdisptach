@@ -21,6 +21,7 @@ export default function ManageClient() {
     timeBlock: "Morning" as TimeBlock,
     instructionText: defaultInstructions,
   });
+  const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     const [driverRes, checkRes] = await Promise.all([
@@ -58,45 +59,93 @@ export default function ManageClient() {
   const inactiveChecks = checks.filter((check) => !check.isActive);
 
   const createDriver = async () => {
-    await fetch("/api/drivers", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newDriver),
-    });
-    setNewDriver({ name: "", truckNumber: "", group: "New Drivers" });
-    await load();
+    setError(null);
+    try {
+      const response = await fetch("/api/drivers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newDriver),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to create driver");
+        return;
+      }
+
+      setNewDriver({ name: "", truckNumber: "", group: "New Drivers" });
+      await load();
+    } catch (err) {
+      setError("Network error. Please check your connection.");
+    }
   };
 
   const createCheck = async () => {
-    await fetch("/api/checks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newCheck),
-    });
-    setNewCheck({
-      displayName: "",
-      timeBlock: "Morning",
-      instructionText: defaultInstructions,
-    });
-    await load();
+    setError(null);
+    try {
+      const response = await fetch("/api/checks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCheck),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to create check column");
+        return;
+      }
+
+      setNewCheck({
+        displayName: "",
+        timeBlock: "Morning",
+        instructionText: defaultInstructions,
+      });
+      await load();
+    } catch (err) {
+      setError("Network error. Please check your connection.");
+    }
   };
 
   const updateDriver = async (id: string, data: Partial<Driver>) => {
-    await fetch(`/api/drivers/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    await load();
+    setError(null);
+    try {
+      const response = await fetch(`/api/drivers/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to update driver");
+        return;
+      }
+
+      await load();
+    } catch (err) {
+      setError("Network error. Please check your connection.");
+    }
   };
 
   const updateCheck = async (id: string, data: Partial<CheckColumn>) => {
-    await fetch(`/api/checks/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
-    await load();
+    setError(null);
+    try {
+      const response = await fetch(`/api/checks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to update check column");
+        return;
+      }
+
+      await load();
+    } catch (err) {
+      setError("Network error. Please check your connection.");
+    }
   };
 
   const reorderList = <T extends { id: string }>(
@@ -167,6 +216,13 @@ export default function ManageClient() {
       </header>
 
       <main className="flex-1 p-6 space-y-6">
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <p className="text-red-800 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Add New Section */}
         <section className="grid gap-6 md:grid-cols-2">
           {/* Add Driver Card */}
