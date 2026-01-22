@@ -60,6 +60,11 @@ export default function ChecklistClient() {
   } | null>(null);
   const [blockedReason, setBlockedReason] = useState(blockedReasons[0]);
   const [blockedNote, setBlockedNote] = useState("");
+  const [donePrompt, setDonePrompt] = useState<{
+    driverId: string;
+    checkId: string;
+  } | null>(null);
+  const [doneNote, setDoneNote] = useState("");
   const [notePanel, setNotePanel] = useState<DailyCheckRecord | null>(null);
   const [instructionPanel, setInstructionPanel] = useState<CheckColumn | null>(null);
 
@@ -186,6 +191,12 @@ export default function ChecklistClient() {
       return;
     }
 
+    if (next === "done") {
+      setDonePrompt({ driverId, checkId });
+      setDoneNote(recordMap[key]?.note ?? "");
+      return;
+    }
+
     if (next === "not_started") {
       const hasNote = Boolean(recordMap[key]?.note);
       if (hasNote && !window.confirm("Clear note and reset this cell?")) return;
@@ -206,6 +217,18 @@ export default function ChecklistClient() {
       blockedReason
     );
     setBlockedPrompt(null);
+  };
+
+  const handleDoneSave = () => {
+    if (!donePrompt) return;
+    handleUpdate(
+      donePrompt.driverId,
+      donePrompt.checkId,
+      "done",
+      doneNote || null,
+      null
+    );
+    setDonePrompt(null);
   };
 
   const filteredStatus = (record: DailyCheckRecord | undefined) => {
@@ -470,6 +493,45 @@ export default function ChecklistClient() {
                   className="flex-1 px-4 py-2 rounded bg-red-600 text-white font-medium hover:bg-red-700 transition text-sm"
                 >
                   Save Blocked
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Done Note Modal */}
+      {donePrompt && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="bg-[#1E3A5F] px-6 py-4 rounded-t-lg">
+              <h2 className="text-lg font-semibold text-white">Mark as Done</h2>
+              <p className="text-blue-200 text-sm">What was communicated with the driver?</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Communication Notes</label>
+                <textarea
+                  value={doneNote}
+                  onChange={(event) => setDoneNote(event.target.value)}
+                  placeholder="Enter details about what was communicated with the driver..."
+                  className="w-full px-3 py-2 rounded border border-gray-300 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 resize-none text-sm"
+                  rows={5}
+                  autoFocus
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setDonePrompt(null)}
+                  className="flex-1 px-4 py-2 rounded border border-gray-300 font-medium text-gray-700 hover:bg-gray-50 transition text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDoneSave}
+                  className="flex-1 px-4 py-2 rounded bg-green-600 text-white font-medium hover:bg-green-700 transition text-sm"
+                >
+                  Mark as Done
                 </button>
               </div>
             </div>
