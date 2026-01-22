@@ -33,6 +33,10 @@ export type DailyCheckRecord = {
   completedAt?: string | null;
   updatedAt: string;
   updatedByUserId: string;
+  updatedByUser?: {
+    id: string;
+    name: string;
+  } | null;
   blockedReason?: string | null;
   note?: string | null;
 };

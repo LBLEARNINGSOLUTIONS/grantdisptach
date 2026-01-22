@@ -33,6 +33,14 @@ export async function GET(request: Request) {
     }),
     prisma.dailyCheckRecord.findMany({
       where: { date },
+      include: {
+        updatedByUser: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+      },
     }),
   ]);
 

@@ -140,6 +140,7 @@ export default function ChecklistClient() {
       completedAt: existing?.completedAt ?? null,
       updatedAt: new Date().toISOString(),
       updatedByUserId: existing?.updatedByUserId ?? "",
+      updatedByUser: existing?.updatedByUser ?? null,
       blockedReason: blockedReasonValue ?? null,
       note: note ?? null,
     };
@@ -386,7 +387,7 @@ export default function ChecklistClient() {
                                 <button
                                   onClick={() => handleCycle(driver.id, check.id)}
                                   className={`inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-gray-100 transition text-xs ${style.text}`}
-                                  title={`Click to change status (${style.label})${timestamp ? ` - Updated ${timestamp}` : ''}`}
+                                  title={`Click to change status (${style.label})${timestamp ? ` - Updated ${timestamp}${record?.updatedByUser?.name ? ` by ${record.updatedByUser.name}` : ''}` : ''}`}
                                 >
                                   <span className="inline-flex items-center gap-1.5">
                                     <span className={`w-2 h-2 rounded-full ${style.dot}`}></span>
@@ -405,7 +406,12 @@ export default function ChecklistClient() {
                                     )}
                                   </span>
                                   {timestamp && status !== 'not_started' && (
-                                    <span className="text-[10px] text-gray-400">{timestamp}</span>
+                                    <span className="text-[10px] text-gray-400">
+                                      {timestamp}
+                                      {record?.updatedByUser?.name && (
+                                        <> - {record.updatedByUser.name}</>
+                                      )}
+                                    </span>
                                   )}
                                 </button>
                               </td>
