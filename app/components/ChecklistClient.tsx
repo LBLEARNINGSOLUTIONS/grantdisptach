@@ -285,6 +285,9 @@ export default function ChecklistClient() {
             <a href="/manage" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Manage
             </a>
+            <a href="/users" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
+              Users
+            </a>
             <a href="/changes" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Changes
             </a>

@@ -209,9 +209,14 @@ export default function ManageClient() {
             <h1 className="text-xl font-semibold">Manage Settings</h1>
             <p className="text-blue-200 text-sm">Edit drivers, columns, and reorder by dragging</p>
           </div>
-          <a href="/" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
-            Back to Checklist
-          </a>
+          <div className="flex gap-2">
+            <a href="/users" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
+              Manage Users
+            </a>
+            <a href="/" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
+              Back to Checklist
+            </a>
+          </div>
         </div>
       </header>
 
