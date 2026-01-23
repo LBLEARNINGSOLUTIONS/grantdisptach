@@ -35,11 +35,36 @@ type RecordMap = Record<string, DailyCheckRecord>;
 const getKey = (driverId: string, checkId: string) => `${driverId}-${checkId}`;
 
 // Professional status styles
-const statusStyles: Record<RecordStatus, { dot: string; text: string; label: string }> = {
-  not_started: { dot: "bg-gray-400", text: "text-gray-500", label: "Not Started" },
-  in_progress: { dot: "bg-blue-500", text: "text-blue-600", label: "In Progress" },
-  done: { dot: "bg-green-600", text: "text-green-700", label: "Done" },
-  blocked: { dot: "bg-red-600", text: "text-red-700", label: "Blocked" },
+const statusStyles: Record<RecordStatus, {
+  bg: string;
+  hover: string;
+  text: string;
+  label: string
+}> = {
+  not_started: {
+    bg: "bg-gray-300",
+    hover: "hover:bg-gray-400",
+    text: "text-white",
+    label: "Not Started"
+  },
+  in_progress: {
+    bg: "bg-yellow-500",
+    hover: "hover:bg-yellow-600",
+    text: "text-white",
+    label: "In Progress"
+  },
+  done: {
+    bg: "bg-green-600",
+    hover: "hover:bg-green-700",
+    text: "text-white",
+    label: "Done"
+  },
+  blocked: {
+    bg: "bg-red-600",
+    hover: "hover:bg-red-700",
+    text: "text-white",
+    label: "Blocked"
+  },
 };
 
 export default function ChecklistClient() {
@@ -409,11 +434,10 @@ export default function ChecklistClient() {
                               <td key={key} id={`cell-${key}`} className="px-2 py-2 text-center border-r border-gray-200">
                                 <button
                                   onClick={() => handleCycle(driver.id, check.id)}
-                                  className={`inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded hover:bg-gray-100 transition text-xs ${style.text}`}
+                                  className={`inline-flex flex-col items-center gap-0.5 px-2 py-1 rounded transition text-xs ${style.bg} ${style.hover} ${style.text}`}
                                   title={`Click to change status (${style.label})${timestamp ? ` - Updated ${timestamp}${record?.updatedByUser?.name ? ` by ${record.updatedByUser.name}` : ''}` : ''}`}
                                 >
                                   <span className="inline-flex items-center gap-1.5">
-                                    <span className={`w-2 h-2 rounded-full ${style.dot}`}></span>
                                     <span className="hidden sm:inline">{style.label}</span>
                                     {record?.note && (
                                       <span
@@ -421,7 +445,7 @@ export default function ChecklistClient() {
                                           e.stopPropagation();
                                           setNotePanel(record);
                                         }}
-                                        className="w-4 h-4 bg-blue-500 rounded-full text-white text-[10px] flex items-center justify-center cursor-pointer hover:bg-blue-600"
+                                        className="w-4 h-4 bg-white border border-blue-600 rounded-full text-blue-600 text-[10px] font-semibold flex items-center justify-center cursor-pointer hover:bg-blue-50"
                                         title="Has note - click to view"
                                       >
                                         !
@@ -429,7 +453,7 @@ export default function ChecklistClient() {
                                     )}
                                   </span>
                                   {timestamp && status !== 'not_started' && (
-                                    <span className="text-[10px] text-gray-400">
+                                    <span className="text-[10px] text-white/70">
                                       {timestamp}
                                       {record?.updatedByUser?.name && (
                                         <> - {record.updatedByUser.name}</>
