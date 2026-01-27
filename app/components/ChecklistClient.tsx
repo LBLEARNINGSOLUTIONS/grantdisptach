@@ -360,7 +360,7 @@ export default function ChecklistClient() {
                       <th
                         key={block}
                         colSpan={blockChecks.length}
-                        className="text-center px-2 py-2 font-semibold text-gray-700 border-r border-gray-200 bg-gray-50"
+                        className="text-center px-2 py-2 font-semibold text-gray-700 border-r border-gray-200 bg-gray-100"
                       >
                         {block}
                       </th>
@@ -370,7 +370,7 @@ export default function ChecklistClient() {
                 {/* Column Names Row */}
                 <tr className="sticky top-[53px] bg-gray-50 border-b-2 border-gray-300 z-20">
                   {allChecks.map((check) => (
-                    <th key={check.id} className="text-center px-2 py-2 font-medium text-gray-500 border-r border-gray-200">
+                    <th key={check.id} className="text-center px-2 py-2 font-medium text-gray-500 border-r border-gray-200 bg-gray-50">
                       <button
                         onClick={() => setInstructionPanel(check)}
                         className="hover:text-blue-600 hover:underline transition text-xs uppercase tracking-wide whitespace-nowrap overflow-hidden text-ellipsis block w-full"
