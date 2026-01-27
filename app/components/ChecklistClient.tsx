@@ -342,7 +342,7 @@ export default function ChecklistClient() {
               {/* Table Header */}
               <thead>
                 {/* Time Block Row */}
-                <tr className="sticky top-0 bg-gray-100 border-b border-gray-200 z-20">
+                <tr className="sticky top-0 bg-gray-100 border-b border-gray-200 z-[21]">
                   <th
                     rowSpan={2}
                     className="text-left px-4 py-2 font-semibold text-gray-700 border-r border-gray-200 sticky left-0 bg-gray-100 z-30"
@@ -368,7 +368,7 @@ export default function ChecklistClient() {
                   ))}
                 </tr>
                 {/* Column Names Row */}
-                <tr className="sticky top-[53px] bg-gray-50 border-b-2 border-gray-300 z-20">
+                <tr className="sticky top-[48px] bg-gray-50 border-b-2 border-gray-300 z-20">
                   {allChecks.map((check) => (
                     <th key={check.id} className="text-center px-2 py-2 font-medium text-gray-500 border-r border-gray-200 bg-gray-50">
                       <button
