@@ -335,23 +335,23 @@ export default function ChecklistClient() {
       </header>
 
       {/* Main Content - Data Table */}
-      <main className="flex-1 p-4 overflow-auto">
+      <main className="flex-1 p-4">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-auto max-h-[calc(100vh-240px)]">
             <table className="w-full border-collapse text-sm">
               {/* Table Header */}
-              <thead className="sticky top-0 z-20">
+              <thead>
                 {/* Time Block Row */}
-                <tr className="bg-gray-100 border-b border-gray-200">
+                <tr className="sticky top-0 bg-gray-100 border-b border-gray-200 z-20">
                   <th
                     rowSpan={2}
-                    className="text-left px-4 py-2 font-semibold text-gray-700 border-r border-gray-200 sticky left-0 bg-gray-100 z-10"
+                    className="text-left px-4 py-2 font-semibold text-gray-700 border-r border-gray-200 sticky left-0 bg-gray-100 z-30"
                   >
                     Driver
                   </th>
                   <th
                     rowSpan={2}
-                    className="text-center px-2 py-2 font-semibold text-gray-700 border-r border-gray-200"
+                    className="text-center px-2 py-2 font-semibold text-gray-700 border-r border-gray-200 bg-gray-100"
                   >
                     Truck
                   </th>
@@ -368,7 +368,7 @@ export default function ChecklistClient() {
                   ))}
                 </tr>
                 {/* Column Names Row */}
-                <tr className="bg-gray-50 border-b-2 border-gray-300">
+                <tr className="sticky top-[53px] bg-gray-50 border-b-2 border-gray-300 z-20">
                   {allChecks.map((check) => (
                     <th key={check.id} className="text-center px-2 py-2 font-medium text-gray-500 border-r border-gray-200">
                       <button
