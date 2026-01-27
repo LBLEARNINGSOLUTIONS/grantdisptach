@@ -340,7 +340,7 @@ export default function ChecklistClient() {
           <div className="overflow-x-auto">
             <table className="w-full border-collapse text-sm">
               {/* Table Header */}
-              <thead>
+              <thead className="sticky top-0 z-20">
                 {/* Time Block Row */}
                 <tr className="bg-gray-100 border-b border-gray-200">
                   <th
