@@ -39,3 +39,4 @@ Edit `config/seed.ts` to update the default driver list and column headers witho
 ## Notes
 - Columns added in the Manage view default to temporary and expire after 14 days unless promoted.
 - Deactivate instead of deleting drivers/columns; all updates are logged in `audit_log`.
+# Trigger redeployment
