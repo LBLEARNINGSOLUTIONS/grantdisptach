@@ -92,6 +92,7 @@ export default function ChecklistClient() {
   const [doneNote, setDoneNote] = useState("");
   const [notePanel, setNotePanel] = useState<DailyCheckRecord | null>(null);
   const [instructionPanel, setInstructionPanel] = useState<CheckColumn | null>(null);
+  const [freeTextInputs, setFreeTextInputs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const load = async () => {
@@ -100,10 +101,16 @@ export default function ChecklistClient() {
       setDrivers(data.drivers);
       setChecks(data.checks);
       const map: RecordMap = {};
+      const textInputs: Record<string, string> = {};
       data.records.forEach((record) => {
-        map[getKey(record.driverId, record.checkId)] = record;
+        const key = getKey(record.driverId, record.checkId);
+        map[key] = record;
+        if (record.freeTextValue) {
+          textInputs[key] = record.freeTextValue;
+        }
       });
       setRecordMap(map);
+      setFreeTextInputs(textInputs);
     };
     load();
   }, [selectedDate]);
@@ -201,6 +208,82 @@ export default function ChecklistClient() {
       // Revert optimistic update on network error
       setRecordMap(previousMap);
       alert("Network error. Please check your connection and try again.");
+    }
+  };
+
+  const handleFreeTextUpdate = async (
+    driverId: string,
+    checkId: string,
+    value: string
+  ) => {
+    const key = getKey(driverId, checkId);
+    const existing = recordMap[key];
+
+    const optimistic: DailyCheckRecord = {
+      id: existing?.id ?? `temp-${key}`,
+      date: selectedDate,
+      driverId,
+      checkId,
+      status: "not_started",
+      startedAt: null,
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: existing?.updatedByUserId ?? "",
+      updatedByUser: existing?.updatedByUser ?? null,
+      blockedReason: null,
+      note: null,
+      freeTextValue: value,
+    };
+
+    const previousMap = recordMap;
+    setRecordMap((prev) => ({ ...prev, [key]: optimistic }));
+
+    try {
+      const response = await fetch("/api/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: selectedDate,
+          driverId,
+          checkId,
+          freeTextValue: value,
+          status: "not_started",
+        }),
+      });
+
+      if (!response.ok) {
+        setRecordMap(previousMap);
+        alert("Failed to update record. Please try again.");
+      }
+    } catch (error) {
+      setRecordMap(previousMap);
+      alert("Network error. Please check your connection and try again.");
+    }
+  };
+
+  const handleFreeTextChange = (driverId: string, checkId: string, value: string) => {
+    const key = getKey(driverId, checkId);
+    setFreeTextInputs((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const handleFreeTextBlur = (driverId: string, checkId: string) => {
+    const key = getKey(driverId, checkId);
+    const value = freeTextInputs[key] ?? "";
+    const existing = recordMap[key]?.freeTextValue ?? "";
+
+    if (value !== existing) {
+      handleFreeTextUpdate(driverId, checkId, value);
+    }
+  };
+
+  const handleFreeTextKeyDown = (
+    event: React.KeyboardEvent<HTMLInputElement>,
+    driverId: string,
+    checkId: string
+  ) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.currentTarget.blur();
     }
   };
 
@@ -423,6 +506,36 @@ export default function ChecklistClient() {
                           {allChecks.map((check) => {
                             const key = getKey(driver.id, check.id);
                             const record = recordMap[key];
+
+                            // Handle free-text input columns
+                            if (check.inputType === "freeText") {
+                              const currentValue = freeTextInputs[key] ?? record?.freeTextValue ?? "";
+                              const timestamp = record?.updatedAt ? formatTime(record.updatedAt) : null;
+
+                              return (
+                                <td key={key} id={`cell-${key}`} className="px-2 py-2 text-center border-r border-gray-200">
+                                  <div className="flex flex-col gap-0.5">
+                                    <input
+                                      type="text"
+                                      value={currentValue}
+                                      onChange={(e) => handleFreeTextChange(driver.id, check.id, e.target.value)}
+                                      onBlur={() => handleFreeTextBlur(driver.id, check.id)}
+                                      onKeyDown={(e) => handleFreeTextKeyDown(e, driver.id, check.id)}
+                                      placeholder=""
+                                      title={check.instructionText}
+                                      className="w-full px-2 py-1 text-xs text-center border border-gray-300 rounded focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                                    />
+                                    {timestamp && record?.updatedByUser?.name && (
+                                      <span className="text-[9px] text-gray-500">
+                                        {timestamp} - {record.updatedByUser.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            }
+
+                            // Handle standard status columns (existing code)
                             const status = record?.status ?? "not_started";
                             const style = statusStyles[status];
                             const showCell = filteredStatus(record);

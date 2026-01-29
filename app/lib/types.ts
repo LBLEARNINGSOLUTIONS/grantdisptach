@@ -19,6 +19,7 @@ export type CheckColumn = {
   sortOrder: number;
   instructionText: string;
   columnType: "standard" | "temporary";
+  inputType: string;
   isActive: boolean;
   expiresAt?: string | null;
 };
@@ -39,4 +40,5 @@ export type DailyCheckRecord = {
   } | null;
   blockedReason?: string | null;
   note?: string | null;
+  freeTextValue?: string | null;
 };

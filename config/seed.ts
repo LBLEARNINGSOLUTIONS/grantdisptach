@@ -67,7 +67,8 @@ export const seedChecks = {
     {
       systemName: "where",
       displayName: "Where",
-      instructionText: "Confirm driver location",
+      instructionText: "Quick free-text note for driver status or reset time (e.g., 'at appt', '10:25', 'now')",
+      inputType: "freeText",
     },
     {
       systemName: "rolling",

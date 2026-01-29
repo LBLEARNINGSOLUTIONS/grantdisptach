@@ -44,6 +44,7 @@ async function main() {
     const records = [
       ...seedChecks.Morning.map((check, index) => ({
         ...check,
+        inputType: (check as any).inputType || "status",
         timeBlock: "Morning" as const,
         sortOrder: index + 1,
         columnType: "standard" as const,
@@ -53,6 +54,7 @@ async function main() {
       })),
       ...seedChecks.Midday.map((check, index) => ({
         ...check,
+        inputType: (check as any).inputType || "status",
         timeBlock: "Midday" as const,
         sortOrder: index + 1,
         columnType: "standard" as const,
@@ -62,6 +64,7 @@ async function main() {
       })),
       ...seedChecks.Afternoon.map((check, index) => ({
         ...check,
+        inputType: (check as any).inputType || "status",
         timeBlock: "Afternoon" as const,
         sortOrder: index + 1,
         columnType: "standard" as const,

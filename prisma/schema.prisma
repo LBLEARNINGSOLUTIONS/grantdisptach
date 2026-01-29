@@ -94,6 +94,7 @@ model Check {
   sortOrder      Int
   instructionText String
   columnType     ColumnType  @default(temporary)
+  inputType      String      @default("status")
   isActive       Boolean     @default(true)
   expiresAt      DateTime?
   createdAt      DateTime    @default(now())
@@ -114,6 +115,7 @@ model DailyCheckRecord {
   updatedByUserId String      @db.Uuid
   blockedReason  String?
   note           String?
+  freeTextValue  String?
 
   driver Driver @relation(fields: [driverId], references: [id])
   check  Check  @relation(fields: [checkId], references: [id])
