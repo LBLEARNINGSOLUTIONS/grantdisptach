@@ -953,7 +953,38 @@ export default function ChecklistClient() {
       {ldPrompt && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold mb-4">Live Dispatch Checklist</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Live Dispatch Checklist</h3>
+              <button
+                onClick={() => {
+                  const currentChecklist = ldPrompt.currentChecklist || {};
+                  const allChecked = ["tarping", "fuel_stops", "routing", "special_requirements"].every(
+                    key => currentChecklist[key as keyof LiveDispatchChecklist]
+                  );
+
+                  const newChecklist = {
+                    tarping: !allChecked,
+                    fuel_stops: !allChecked,
+                    routing: !allChecked,
+                    special_requirements: !allChecked,
+                  };
+
+                  setLdPrompt({
+                    ...ldPrompt,
+                    currentChecklist: newChecklist,
+                  });
+                }}
+                className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition"
+              >
+                {(() => {
+                  const currentChecklist = ldPrompt.currentChecklist || {};
+                  const allChecked = ["tarping", "fuel_stops", "routing", "special_requirements"].every(
+                    key => currentChecklist[key as keyof LiveDispatchChecklist]
+                  );
+                  return allChecked ? "Clear All" : "Select All";
+                })()}
+              </button>
+            </div>
 
             <div className="space-y-3 mb-6">
               {[
