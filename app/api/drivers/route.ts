@@ -5,7 +5,10 @@ import { prisma } from "@/app/lib/prisma";
 import { driverGroupFromEnum, driverGroupToEnum } from "@/app/lib/mappers";
 
 export async function GET() {
-  const drivers = await prisma.driver.findMany({ orderBy: [{ group: "asc" }, { sortOrder: "asc" }] });
+  const drivers = await prisma.driver.findMany({
+    where: { deletedAt: null },
+    orderBy: [{ group: "asc" }, { sortOrder: "asc" }]
+  });
   return NextResponse.json({
     drivers: drivers.map((driver) => ({
       ...driver,

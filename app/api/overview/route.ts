@@ -17,7 +17,10 @@ export async function GET(request: Request) {
   const now = new Date();
   const [drivers, checks, records] = await Promise.all([
     prisma.driver.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        deletedAt: null
+      },
       orderBy: [{ group: "asc" }, { sortOrder: "asc" }],
     }),
     prisma.check.findMany({

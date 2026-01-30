@@ -127,6 +127,36 @@ export default function ManageClient() {
     }
   };
 
+  const handleDeleteDriver = async (id: string, name: string) => {
+    const confirmed = window.confirm(
+      `Delete driver "${name}"?\n\n` +
+      `This will:\n` +
+      `• Permanently remove the driver from the system\n` +
+      `• Keep all historical check records intact\n` +
+      `• This action can be reversed by database admin if needed\n\n` +
+      `Continue?`
+    );
+
+    if (!confirmed) return;
+
+    setError(null);
+    try {
+      const response = await fetch(`/api/drivers/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to delete driver");
+        return;
+      }
+
+      await load();
+    } catch (err) {
+      setError("Network error. Please check your connection.");
+    }
+  };
+
   const updateCheck = async (id: string, data: Partial<CheckColumn>) => {
     setError(null);
     try {
@@ -401,6 +431,12 @@ export default function ManageClient() {
                       }`}
                     >
                       {driver.isActive ? "Hide" : "Show"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteDriver(driver.id, driver.name)}
+                      className="px-3 py-1.5 rounded border border-red-300 text-red-700 text-sm font-medium hover:bg-red-50 transition"
+                    >
+                      Delete
                     </button>
                   </div>
                 </div>

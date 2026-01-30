@@ -16,6 +16,7 @@ export type Driver = {
   group: DriverGroup;
   sortOrder: number;
   isActive: boolean;
+  deletedAt?: string | null;
 };
 
 export type CheckColumn = {

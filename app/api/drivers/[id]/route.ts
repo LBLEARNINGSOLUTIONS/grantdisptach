@@ -58,3 +58,58 @@ export async function PATCH(
     driver: { ...updated, group: driverGroupFromEnum(updated.group) },
   });
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  const { id } = params;
+
+  const driver = await prisma.driver.findUnique({
+    where: { id },
+    include: {
+      _count: {
+        select: { records: true }
+      }
+    }
+  });
+
+  if (!driver) {
+    return NextResponse.json({ error: "driver not found" }, { status: 404 });
+  }
+
+  if (driver.deletedAt) {
+    return NextResponse.json({ error: "driver already deleted" }, { status: 400 });
+  }
+
+  const now = new Date();
+  const deletedDriver = await prisma.driver.update({
+    where: { id },
+    data: { deletedAt: now }
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: session.user.id,
+      entityType: "driver",
+      entityId: driver.id,
+      action: "delete",
+      summary: `Deleted driver ${driver.name}`,
+      diff: {
+        before: driver,
+        after: { ...driver, deletedAt: now },
+        recordCount: driver._count.records
+      },
+    },
+  });
+
+  return NextResponse.json({
+    success: true,
+    driver: { ...deletedDriver, group: driverGroupFromEnum(deletedDriver.group) }
+  });
+}
