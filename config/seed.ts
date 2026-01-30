@@ -105,7 +105,8 @@ export const seedChecks = {
     {
       systemName: "live_dispatch",
       displayName: "Live Dispatch",
-      instructionText: "Check live dispatch status",
+      instructionText: "Toggle Live Dispatch mode and track checklist items (tarping, fuel, routing, special requirements)",
+      inputType: "liveDispatch",
     },
     {
       systemName: "midday_route_fuel",

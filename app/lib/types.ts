@@ -2,6 +2,13 @@ export type TimeBlock = "Morning" | "Midday" | "Afternoon";
 export type RecordStatus = "not_started" | "in_progress" | "done" | "blocked";
 export type DriverGroup = "New Drivers" | "Local Drivers" | "Experienced Drivers";
 
+export type LiveDispatchChecklist = {
+  tarping?: boolean;
+  fuel_stops?: boolean;
+  routing?: boolean;
+  special_requirements?: boolean;
+};
+
 export type Driver = {
   id: string;
   name: string;
@@ -41,4 +48,6 @@ export type DailyCheckRecord = {
   blockedReason?: string | null;
   note?: string | null;
   freeTextValue?: string | null;
+  liveDispatchActive?: boolean | null;
+  liveDispatchChecklist?: LiveDispatchChecklist | null;
 };

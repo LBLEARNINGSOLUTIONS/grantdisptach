@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { CheckColumn, DailyCheckRecord, Driver, RecordStatus } from "@/app/lib/types";
+import type { CheckColumn, DailyCheckRecord, Driver, RecordStatus, LiveDispatchChecklist } from "@/app/lib/types";
 import { groupOrder, statusCycle, timeBlocks } from "@/app/lib/format";
 
 const blockedReasons = [
@@ -93,6 +93,12 @@ export default function ChecklistClient() {
   const [notePanel, setNotePanel] = useState<DailyCheckRecord | null>(null);
   const [instructionPanel, setInstructionPanel] = useState<CheckColumn | null>(null);
   const [freeTextInputs, setFreeTextInputs] = useState<Record<string, string>>({});
+  const [ldPrompt, setLdPrompt] = useState<{
+    driverId: string;
+    checkId: string;
+    currentActive: boolean;
+    currentChecklist: LiveDispatchChecklist | null;
+  } | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -285,6 +291,116 @@ export default function ChecklistClient() {
       event.preventDefault();
       event.currentTarget.blur();
     }
+  };
+
+  const handleLiveDispatchToggle = async (
+    driverId: string,
+    checkId: string,
+    active: boolean
+  ) => {
+    const key = getKey(driverId, checkId);
+    const existing = recordMap[key];
+
+    const optimistic: DailyCheckRecord = {
+      id: existing?.id ?? `temp-${key}`,
+      date: selectedDate,
+      driverId,
+      checkId,
+      status: "not_started",
+      startedAt: null,
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: existing?.updatedByUserId ?? "",
+      updatedByUser: existing?.updatedByUser ?? null,
+      blockedReason: null,
+      note: null,
+      freeTextValue: null,
+      liveDispatchActive: active,
+      liveDispatchChecklist: active ? (existing?.liveDispatchChecklist ?? null) : null,
+    };
+
+    const previousMap = recordMap;
+    setRecordMap((prev) => ({ ...prev, [key]: optimistic }));
+
+    try {
+      const response = await fetch("/api/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: selectedDate,
+          driverId,
+          checkId,
+          liveDispatchActive: active,
+          liveDispatchChecklist: active ? (existing?.liveDispatchChecklist ?? null) : null,
+          status: "not_started",
+        }),
+      });
+
+      if (!response.ok) {
+        setRecordMap(previousMap);
+        alert("Failed to update Live Dispatch. Please try again.");
+      }
+    } catch (error) {
+      setRecordMap(previousMap);
+      alert("Network error. Please check your connection and try again.");
+    }
+  };
+
+  const handleLiveDispatchUpdate = async (
+    driverId: string,
+    checkId: string,
+    checklist: LiveDispatchChecklist
+  ) => {
+    const key = getKey(driverId, checkId);
+    const existing = recordMap[key];
+
+    const hasAnyChecked = Object.values(checklist).some(v => v === true);
+
+    const optimistic: DailyCheckRecord = {
+      id: existing?.id ?? `temp-${key}`,
+      date: selectedDate,
+      driverId,
+      checkId,
+      status: "not_started",
+      startedAt: null,
+      completedAt: null,
+      updatedAt: new Date().toISOString(),
+      updatedByUserId: existing?.updatedByUserId ?? "",
+      updatedByUser: existing?.updatedByUser ?? null,
+      blockedReason: null,
+      note: null,
+      freeTextValue: null,
+      liveDispatchActive: hasAnyChecked || existing?.liveDispatchActive || false,
+      liveDispatchChecklist: checklist,
+    };
+
+    const previousMap = recordMap;
+    setRecordMap((prev) => ({ ...prev, [key]: optimistic }));
+
+    try {
+      const response = await fetch("/api/records", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: selectedDate,
+          driverId,
+          checkId,
+          liveDispatchActive: hasAnyChecked || existing?.liveDispatchActive || false,
+          liveDispatchChecklist: checklist,
+          status: "not_started",
+        }),
+      });
+
+      if (!response.ok) {
+        setRecordMap(previousMap);
+        alert("Failed to update Live Dispatch. Please try again.");
+      }
+    } catch (error) {
+      setRecordMap(previousMap);
+      alert("Network error. Please check your connection and try again.");
+    }
+
+    setLdPrompt(null);
   };
 
   const handleCycle = (driverId: string, checkId: string) => {
@@ -535,6 +651,67 @@ export default function ChecklistClient() {
                               );
                             }
 
+                            // Handle Live Dispatch columns
+                            if (check.inputType === "liveDispatch") {
+                              const isActive = record?.liveDispatchActive || false;
+                              const checklist = record?.liveDispatchChecklist || null;
+                              const timestamp = record?.updatedAt ? formatTime(record.updatedAt) : null;
+
+                              let displayText = "";
+                              if (isActive) {
+                                const checks = checklist as LiveDispatchChecklist | null;
+                                if (checks && Object.values(checks).some(v => v)) {
+                                  const initials: string[] = [];
+                                  if (checks.tarping) initials.push("T");
+                                  if (checks.fuel_stops) initials.push("F");
+                                  if (checks.routing) initials.push("R");
+                                  if (checks.special_requirements) initials.push("S");
+                                  displayText = initials.length > 0 ? `LD (${initials.join(",")})` : "LD";
+                                } else {
+                                  displayText = "LD";
+                                }
+                              }
+
+                              const bgColor = isActive ? "bg-yellow-100 hover:bg-yellow-200" : "bg-gray-50 hover:bg-gray-100";
+                              const textColor = isActive ? "text-yellow-900" : "text-gray-500";
+
+                              return (
+                                <td key={key} id={`cell-${key}`} className="px-2 py-2 text-center border-r border-gray-200">
+                                  <div className="flex flex-col gap-0.5">
+                                    <div className="flex items-center justify-center gap-1">
+                                      <button
+                                        onClick={() => handleLiveDispatchToggle(driver.id, check.id, !isActive)}
+                                        className={`px-2 py-1 rounded text-xs font-medium transition ${bgColor} ${textColor}`}
+                                        title={`Live Dispatch: ${isActive ? 'Active' : 'Inactive'} - Click to toggle`}
+                                      >
+                                        {displayText || "—"}
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setLdPrompt({
+                                            driverId: driver.id,
+                                            checkId: check.id,
+                                            currentActive: isActive,
+                                            currentChecklist: checklist as LiveDispatchChecklist | null,
+                                          });
+                                        }}
+                                        className="w-5 h-5 text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full flex items-center justify-center transition"
+                                        title="Edit Live Dispatch checklist"
+                                      >
+                                        ⚙
+                                      </button>
+                                    </div>
+                                    {timestamp && record?.updatedByUser?.name && (
+                                      <span className="text-[9px] text-gray-500">
+                                        {timestamp} - {record.updatedByUser.name}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                              );
+                            }
+
                             // Handle standard status columns (existing code)
                             const status = record?.status ?? "not_started";
                             const style = statusStyles[status];
@@ -767,6 +944,73 @@ export default function ChecklistClient() {
               <div className="bg-gray-50 rounded border border-gray-200 p-4 text-gray-700 text-sm whitespace-pre-wrap">
                 {instructionPanel.instructionText || "No instructions available."}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Dispatch Checklist Modal */}
+      {ldPrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold mb-4">Live Dispatch Checklist</h3>
+
+            <div className="space-y-3 mb-6">
+              {[
+                { key: "tarping", label: "Tarping", initial: "T" },
+                { key: "fuel_stops", label: "Fuel Stops", initial: "F" },
+                { key: "routing", label: "Routing", initial: "R" },
+                { key: "special_requirements", label: "Special Requirements", initial: "S" },
+              ].map(({ key, label, initial }) => {
+                const currentChecklist = ldPrompt.currentChecklist || {};
+                const isChecked = currentChecklist[key as keyof LiveDispatchChecklist] || false;
+
+                return (
+                  <label
+                    key={key}
+                    className="flex items-center gap-3 p-3 rounded hover:bg-gray-50 cursor-pointer transition"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        const newChecklist = {
+                          ...ldPrompt.currentChecklist,
+                          [key]: e.target.checked,
+                        };
+                        setLdPrompt({
+                          ...ldPrompt,
+                          currentChecklist: newChecklist,
+                        });
+                      }}
+                      className="w-5 h-5 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="flex-1 text-sm font-medium">{label}</span>
+                    <span className="text-xs text-gray-500 font-mono">({initial})</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setLdPrompt(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  handleLiveDispatchUpdate(
+                    ldPrompt.driverId,
+                    ldPrompt.checkId,
+                    ldPrompt.currentChecklist || {}
+                  );
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>

@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { date, driverId, checkId, status, blockedReason, note, freeTextValue } = body;
+  const { date, driverId, checkId, status, blockedReason, note, freeTextValue, liveDispatchActive, liveDispatchChecklist } = body;
 
   if (!date || !driverId || !checkId) {
     return NextResponse.json({ error: "missing fields" }, { status: 400 });
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
 
   const resetFields =
     status === "not_started"
-      ? { startedAt: null, completedAt: null, blockedReason: null, note: null, freeTextValue: null }
+      ? { startedAt: null, completedAt: null, blockedReason: null, note: null, freeTextValue: null, liveDispatchActive: null, liveDispatchChecklist: null }
       : {};
 
   const startedAt =
@@ -65,6 +65,8 @@ export async function POST(request: Request) {
       blockedReason: blockedReason ?? null,
       note: note ?? null,
       freeTextValue: freeTextValue ?? null,
+      liveDispatchActive: liveDispatchActive ?? null,
+      liveDispatchChecklist: liveDispatchChecklist ?? null,
     },
     update: {
       status: status ?? undefined,
@@ -75,6 +77,8 @@ export async function POST(request: Request) {
       blockedReason: blockedReason ?? null,
       note: note ?? null,
       freeTextValue: freeTextValue ?? null,
+      liveDispatchActive: liveDispatchActive ?? undefined,
+      liveDispatchChecklist: liveDispatchChecklist ?? undefined,
     },
   });
 
@@ -86,7 +90,7 @@ export async function POST(request: Request) {
       entityId: record.id,
       action,
       summary: `Record ${action} to ${status || 'free-text'}`,
-      diff: { status, blockedReason, note, freeTextValue },
+      diff: { status, blockedReason, note, freeTextValue, liveDispatchActive, liveDispatchChecklist },
     },
   });
 

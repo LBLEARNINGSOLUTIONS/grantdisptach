@@ -116,6 +116,8 @@ model DailyCheckRecord {
   blockedReason  String?
   note           String?
   freeTextValue  String?
+  liveDispatchActive    Boolean?
+  liveDispatchChecklist Json?
 
   driver Driver @relation(fields: [driverId], references: [id])
   check  Check  @relation(fields: [checkId], references: [id])
