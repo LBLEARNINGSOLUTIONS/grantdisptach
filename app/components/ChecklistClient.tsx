@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { signOut } from "next-auth/react";
 import type { CheckColumn, DailyCheckRecord, Driver, RecordStatus, LiveDispatchChecklist } from "@/app/lib/types";
 import { groupOrder, statusCycle, timeBlocks } from "@/app/lib/format";
 
@@ -99,6 +100,10 @@ export default function ChecklistClient() {
     currentActive: boolean;
     currentChecklist: LiveDispatchChecklist | null;
   } | null>(null);
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -490,6 +495,13 @@ export default function ChecklistClient() {
             <a href="/changes" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Changes
             </a>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition text-white"
+              title="Sign out of your account"
+            >
+              Logout
+            </button>
           </div>
         </div>
 

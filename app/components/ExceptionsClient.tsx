@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { signOut } from "next-auth/react";
 import type { CheckColumn, DailyCheckRecord, Driver } from "@/app/lib/types";
 import { timeBlocks } from "@/app/lib/format";
 
@@ -11,6 +12,10 @@ export default function ExceptionsClient() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [checks, setChecks] = useState<CheckColumn[]>([]);
   const [records, setRecords] = useState<DailyCheckRecord[]>([]);
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -78,6 +83,13 @@ export default function ExceptionsClient() {
           <a href="/" className="rounded-xl border border-ink px-3 py-2 text-sm">
             Back to Today
           </a>
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-red-500 bg-red-600 text-white px-3 py-2 text-sm hover:bg-red-700 transition"
+            title="Sign out of your account"
+          >
+            Logout
+          </button>
         </div>
       </header>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 
 type User = {
   id: string;
@@ -15,6 +16,10 @@ export default function UsersClient() {
   const [newUser, setNewUser] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -90,6 +95,13 @@ export default function UsersClient() {
             <a href="/" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Back to Checklist
             </a>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition text-white"
+              title="Sign out of your account"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </header>

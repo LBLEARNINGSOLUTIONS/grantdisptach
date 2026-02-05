@@ -1,9 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { signOut } from "next-auth/react";
 
 export default function ChangesClient() {
   const [changes, setChanges] = useState<any[]>([]);
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -21,9 +26,18 @@ export default function ChangesClient() {
           <h1 className="text-2xl font-semibold">Recent Changes</h1>
           <p className="text-sm text-neutral-600">Last 7 days of updates.</p>
         </div>
-        <a href="/" className="rounded-xl border border-ink px-3 py-2 text-sm">
-          Back to Today
-        </a>
+        <div className="flex items-center gap-2">
+          <a href="/" className="rounded-xl border border-ink px-3 py-2 text-sm">
+            Back to Today
+          </a>
+          <button
+            onClick={handleLogout}
+            className="rounded-xl border border-red-500 bg-red-600 text-white px-3 py-2 text-sm hover:bg-red-700 transition"
+            title="Sign out of your account"
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <div className="rounded-3xl bg-white/80 p-5 shadow space-y-3">

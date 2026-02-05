@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { signOut } from "next-auth/react";
 import type { CheckColumn, Driver, DriverGroup, TimeBlock } from "@/app/lib/types";
 import { groupOrder, timeBlocks } from "@/app/lib/format";
 
@@ -22,6 +23,10 @@ export default function ManageClient() {
     instructionText: defaultInstructions,
   });
   const [error, setError] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: '/login' });
+  };
 
   const load = async () => {
     const [driverRes, checkRes] = await Promise.all([
@@ -246,6 +251,13 @@ export default function ManageClient() {
             <a href="/" className="px-4 py-2 bg-[#3B5998] hover:bg-[#4a6aa8] rounded text-sm font-medium transition">
               Back to Checklist
             </a>
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded text-sm font-medium transition text-white"
+              title="Sign out of your account"
+            >
+              Logout
+            </button>
           </div>
         </div>
       </header>
