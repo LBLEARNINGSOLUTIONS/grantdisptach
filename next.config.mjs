@@ -10,6 +10,10 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: "frame-ancestors 'self' https://teams.microsoft.com https://*.sharepoint.com https://*.microsoft.com",
           },
+          {
+            key: "X-Frame-Options",
+            value: "ALLOWALL",
+          },
         ],
       },
     ];
