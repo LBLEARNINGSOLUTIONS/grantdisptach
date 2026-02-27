@@ -3,9 +3,31 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/app/lib/prisma";
 
+// Use SameSite=None + Secure in production (HTTPS) for Teams/SharePoint iframe compatibility.
+// In local dev (HTTP), keep defaults since Secure cookies require HTTPS.
+const useSecureCookies = (process.env.NEXTAUTH_URL ?? "").startsWith("https://");
+const cookiePrefix = useSecureCookies ? "__Secure-next-auth" : "next-auth";
+const cookieOptions = useSecureCookies
+  ? { httpOnly: true, sameSite: "none" as const, secure: true, path: "/" }
+  : { httpOnly: true, sameSite: "lax" as const, secure: false, path: "/" };
+
 export const authOptions: NextAuthOptions = {
   secret: process.env.NEXTAUTH_SECRET,
   session: { strategy: "jwt" },
+  cookies: {
+    sessionToken: {
+      name: `${cookiePrefix}.session-token`,
+      options: cookieOptions,
+    },
+    csrfToken: {
+      name: `${cookiePrefix}.csrf-token`,
+      options: { ...cookieOptions, httpOnly: false },
+    },
+    callbackUrl: {
+      name: `${cookiePrefix}.callback-url`,
+      options: { ...cookieOptions, httpOnly: false },
+    },
+  },
   providers: [
     CredentialsProvider({
       name: "Credentials",
