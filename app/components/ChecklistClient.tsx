@@ -35,6 +35,30 @@ type RecordMap = Record<string, DailyCheckRecord>;
 
 const getKey = (driverId: string, checkId: string) => `${driverId}-${checkId}`;
 
+// Read a useful error description out of a non-OK fetch Response.
+// Tries JSON first (matching the shape returned by /api/records on failure),
+// then falls back to plain text or a generic message.
+const readErrorDetail = async (response: Response): Promise<string> => {
+  try {
+    const cloned = response.clone();
+    const data = await cloned.json();
+    if (data && typeof data === "object") {
+      const parts = [data.error, data.message, data.code]
+        .filter((v) => typeof v === "string" && v.length > 0);
+      if (parts.length > 0) return parts.join(" — ");
+    }
+  } catch {
+    // fall through to text
+  }
+  try {
+    const text = await response.text();
+    if (text) return text.slice(0, 500);
+  } catch {
+    // ignore
+  }
+  return "no error detail returned by server";
+};
+
 // Professional status styles
 const statusStyles: Record<RecordStatus, {
   bg: string;
@@ -213,12 +237,15 @@ export default function ChecklistClient() {
       if (!response.ok) {
         // Revert optimistic update on error
         setRecordMap(previousMap);
-        alert("Failed to update record. Please try again.");
+        const detail = await readErrorDetail(response);
+        console.error("[handleUpdate] save failed", { status: response.status, detail });
+        alert(`Unable to save (HTTP ${response.status}): ${detail}`);
       }
     } catch (error) {
       // Revert optimistic update on network error
       setRecordMap(previousMap);
-      alert("Network error. Please check your connection and try again.");
+      console.error("[handleUpdate] network error", error);
+      alert(`Network error: ${(error as Error)?.message ?? "unknown"}. Please check your connection and try again.`);
     }
   };
 
@@ -264,11 +291,14 @@ export default function ChecklistClient() {
 
       if (!response.ok) {
         setRecordMap(previousMap);
-        alert("Failed to update record. Please try again.");
+        const detail = await readErrorDetail(response);
+        console.error("[handleFreeTextUpdate] save failed", { status: response.status, detail });
+        alert(`Unable to save (HTTP ${response.status}): ${detail}`);
       }
     } catch (error) {
       setRecordMap(previousMap);
-      alert("Network error. Please check your connection and try again.");
+      console.error("[handleFreeTextUpdate] network error", error);
+      alert(`Network error: ${(error as Error)?.message ?? "unknown"}. Please check your connection and try again.`);
     }
   };
 
@@ -343,11 +373,14 @@ export default function ChecklistClient() {
 
       if (!response.ok) {
         setRecordMap(previousMap);
-        alert("Failed to update Live Dispatch. Please try again.");
+        const detail = await readErrorDetail(response);
+        console.error("[handleLiveDispatchToggle] save failed", { status: response.status, detail });
+        alert(`Unable to save Live Dispatch (HTTP ${response.status}): ${detail}`);
       }
     } catch (error) {
       setRecordMap(previousMap);
-      alert("Network error. Please check your connection and try again.");
+      console.error("[handleLiveDispatchToggle] network error", error);
+      alert(`Network error: ${(error as Error)?.message ?? "unknown"}. Please check your connection and try again.`);
     }
   };
 
@@ -398,11 +431,14 @@ export default function ChecklistClient() {
 
       if (!response.ok) {
         setRecordMap(previousMap);
-        alert("Failed to update Live Dispatch. Please try again.");
+        const detail = await readErrorDetail(response);
+        console.error("[handleLiveDispatchUpdate] save failed", { status: response.status, detail });
+        alert(`Unable to save Live Dispatch (HTTP ${response.status}): ${detail}`);
       }
     } catch (error) {
       setRecordMap(previousMap);
-      alert("Network error. Please check your connection and try again.");
+      console.error("[handleLiveDispatchUpdate] network error", error);
+      alert(`Network error: ${(error as Error)?.message ?? "unknown"}. Please check your connection and try again.`);
     }
 
     setLdPrompt(null);
